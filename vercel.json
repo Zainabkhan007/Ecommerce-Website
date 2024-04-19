@@ -1,20 +1,23 @@
-
 {
   "builds": [
     {
       "src": "eccomerce/wsgi.py",
       "use": "@vercel/python",
       "config": { "maxLambdaSize": "15mb", "runtime": "python3.9" }
-    }],
-  
+    }
+  ],
   "routes": [
     {
-    
+      "src": "/media/shop/images/(.*)",
+      "dest": "eccomerce/media/shop/images/$1"
+    },
+    {
+      "src": "/media/store/images/(.*)",
+      "dest": "eccomerce/media/store/images/$1"
+    },
+    {
       "src": "/(.*)",
       "dest": "eccomerce/wsgi.py"
     }
-  ],
-  "rewrites":[{"source":"/(.*)","destination":"/"}]
+  ]
 }
-
-

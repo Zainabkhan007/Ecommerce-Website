@@ -3,8 +3,11 @@
   "builds": [
     {
       "src": "eccomerce/wsgi.py",
-      "use": "@vercel/python@3.9",
-      "config": { "maxLambdaSize": "15mb" }
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "15mb",
+        "runtime": "python3.9"
+      }
     }
   ],
   "routes": [

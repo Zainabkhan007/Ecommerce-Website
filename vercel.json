@@ -13,7 +13,8 @@
       "src": "/(.*)",
       "dest": "eccomerce/wsgi.py"
     }
-  ]
+  ],
+  "rewrites":[{"source":"/(.*)","destination":"/"}]
 }
 
 

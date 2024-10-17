@@ -1,0 +1,22 @@
+# version: '3.8'  # Optionally specify a version (if using a compatible Docker Compose version)
+
+services:
+  db:
+    image: nouchka/sqlite3:latest
+    container_name: db
+    volumes:
+      - ./data/db:/root/db
+    environment:
+      SQLITE3_DB: db.sqlite3  # Updated format
+
+  web:
+    build:
+      context: .
+    command: python manage.py runserver 0.0.0.0:8000
+    container_name: eccomerce
+    volumes:
+      - .:/eccomerce
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db

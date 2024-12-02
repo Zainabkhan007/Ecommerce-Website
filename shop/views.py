@@ -1,11 +1,15 @@
-from django.shortcuts import render
+from django.shortcuts import render,reverse,redirect
 from django.http import HttpResponse
 from .models import Product,Contact,Orders,UpdateOrders,Slider
+from django.views import generic
 from math import ceil
 import json
+from django.views.decorators.csrf import csrf_exempt
+import datetime
+import stripe
+from django.conf import settings
 
-
-
+endpoint_secret=settings.STRIPE_WEBHOOK_SECRET
 # def home(request): 
     # Method to print only one slides
     # products = Product.objects.all()
@@ -111,12 +115,108 @@ def checkout(request):
                        state=state, zip_code=zip_code, phone=phone,amount=amount)
         
         order.save()
+
         update=UpdateOrders(order_id=order.order_id,update_desc="The order has been placed")
         update.save()
+   
         thank = True
         id = order.order_id
-        return render(request, 'shop/checkout.html', {'thank':thank, 'id': id})
+ 
+        return render(request, 'shop/checkout.html', {'thank':thank,  'id': id})
+       
+   
     return render(request, 'shop/checkout.html')
+
+
+# Stripe payment
+
+# This is your test secret API key.
+stripe.api_key = settings.STRIPE_SECRET_KEY
+
+class CheckoutPayment(generic.View):
+    def post(self,*args,**kwargs):
+        host=self.request.get_host()
+        items_json = self.request.POST.get('itemsJson', '')
+        cart = json.loads(items_json) 
+        total_amount=0
+        for item_id, item_details in cart.items():
+          qty = item_details[0]  # Quantity
+          price = item_details[2]  # Price per item (in paise)
+          total_amount += qty * price  # Calculate total amount in paise
+
+    # Ensure total_amount is above the minimum threshold
+        if total_amount < 5000:  # 5000 paise = ₹50.00
+           return HttpResponse("Total amount must be at least ₹50.00")
+
+     
+        checkout_session = stripe.checkout.Session.create(
+            line_items=[
+                {
+                    'price_data':{
+                        'currency':'inr',
+                        'unit_amount': total_amount * 100,
+                        'product_data':{
+                            'name':"Test Product",
+                        },
+                    },
+                    'quantity':1,
+                },
+            ],
+            mode='payment',
+            success_url='http://{}{}'.format(host,reverse('shop:payment-success')),
+            cancel_url='http://{}{}'.format(host,reverse('shop:payment-cancel')),
+        )
+       
+
+        return redirect(checkout_session.url, code=303)
+    
+def PaymentSuccess(request):
+   
+    context={
+         'payment_status':'success',
+         
+    }
+    return render(request,'shop/confirmation.html',context)
+def PaymentCancel(request):
+    context={
+         'payment_status':'cancel'
+    }
+    return render(request,'shop/confirmation.html',context)
+
+
+
+# Using Django
+@csrf_exempt
+def my_webhook_view(request):
+  payload = request.body
+  slg_header=request.META["HTTP_STRIPE_SIGNATURE"]
+  event = None
+
+  try:
+    event = stripe.Webhook.construct_event(
+      payload, slg_header, endpoint_secret    )
+  except ValueError as e:
+    # Invalid payload
+    return HttpResponse(status=400)
+
+  # Handle the event
+  if event['type'] == 'checkout.session.completed':
+    session = event['data']['object'] 
+    if session.payment_status == 'paid':
+       line_item=session.list_line_items(session.order_id, limit =1).data[0]
+       order_id=line_item["description"]
+       fulfill_order(order_id) 
+  
+  
+
+  return HttpResponse(status=200)
+
+def fulfill_order(order_id):
+    order=Orders.objects.get(order_id=order_id)
+    order.ordered=True
+    order.orderDate=datetime.datetime.now()
+    order.save()
+
 
 def tracker(request):
     if request.method=="POST":

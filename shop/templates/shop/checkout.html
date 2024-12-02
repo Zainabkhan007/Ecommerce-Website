@@ -18,7 +18,7 @@
     </div>
     <div class="col my-4">
         <h2>Step 2 - Enter Address & Other Details:</h2>
-        <form method="post" action="/shop/checkout">{% csrf_token %}
+        <form  action="{% url "shop:create-checkout-session" %}" method="post" >{% csrf_token %}
             <input type="hidden" name="itemsJson" id="itemsJson">
             <input type="hidden" name="amount" id="amount">
             <div class="form-row">
@@ -57,6 +57,7 @@
                 <label for="inputZip">Phone Number</label>
                 <input type="tel" class="form-control" id="phone" name="phone">
             </div>
+            <input type="hidden"  name="order-id" value={{ id }}>
             <button type="submit" class="btn btn-primary">Place Order</button>
         </form>
     </div>
@@ -106,7 +107,7 @@ alert('Thanks for ordering with us. Your order is is {{id}}. Use it to track you
 localStorage.clear();
 document.location = "/shop";
 {% endif %}
-$('#amount').val($('#totalPrice').html())
+$('#amount').val($('#totalPrice').html()) 
 </script>
 {% endblock %}
 `
